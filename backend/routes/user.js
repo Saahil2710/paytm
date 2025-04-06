@@ -1,30 +1,47 @@
 const {Router} = require("mongoose");
 const userRouter = Router();
 const {User} = require("../db")
+const zod = require("zod");
 
 const jwt = requier("jsonwebtoken");
 const {JWT_SECRET} = require('../config');
 
-userRouter.post("/signup",function(req,res){
+const signupSchema = zod.object({
+    username :zod.string().email(),
+    password :zod.string(),
+    firstName:zod.string(),
+    lastName:zod.string()
 
-    const { username,
-        password,
-        firstName ,
-        lastName  } = req.body;
+}) 
 
-        const user = User.create({
-            username,
-            password,
-            firstName,
-            lastName,
+userRouter.post("/signup",async function(req,res){
+
+    const body = req.body;
+    const {success} = signupSchema.safeParse(req.body);
+    if(!success){
+        return res.json({
+            message:"Email already taken / Incorrect inputs"
+        })
+    } 
+
+        const user = User.findOne({
+            username : body.username
         })
 
-        if(user){
-            res.json({
-                msg:'user create successfully'
-            })
+        if(user._id){
+            return res.json({
 
+            })
         }
+
+        const dbUser = await User.create(body);
+        const token = jwt.sign({
+            userId:dbUser.id
+        },JWT_SECRET)
+        res.json({
+            message:'User created successfully',
+            token:token
+        })
 })
 
 
